@@ -1,9 +1,10 @@
 "use client";
 
+import { Suspense, useState, useEffect } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Header from "@/components/ui/header";
 import Footer from "@/components/ui/footer";
-import { useState } from "react";
-import Link from "next/link";
 
 const allTemplates = [
   { title: "Neon Pulse", genre: "EDM", bpm: 128, mood: "Energetic", complexity: "Complex", gradient: "from-neon-indigo via-hologram-teal to-retro-pink" },
@@ -19,9 +20,20 @@ const allTemplates = [
 const genres = ["All", "EDM", "Synthwave", "Hip-Hop", "Indie", "Rock"];
 const moods = ["All", "Energetic", "Melancholic"];
 
-export default function TemplatesPage() {
+function TemplatesContent() {
+  const searchParams = useSearchParams();
   const [activeGenre, setActiveGenre] = useState("All");
   const [activeMood, setActiveMood] = useState("All");
+
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q) {
+      const matched = allTemplates.find(
+        (t) => t.title.toLowerCase() === q.toLowerCase()
+      );
+      if (matched) setActiveGenre(matched.genre);
+    }
+  }, [searchParams]);
 
   const filtered = allTemplates.filter((t) => {
     if (activeGenre !== "All" && t.genre !== activeGenre) return false;
@@ -116,5 +128,13 @@ export default function TemplatesPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function TemplatesPage() {
+  return (
+    <Suspense fallback={null}>
+      <TemplatesContent />
+    </Suspense>
   );
 }

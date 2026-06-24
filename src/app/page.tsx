@@ -3,6 +3,7 @@ import Footer from "@/components/ui/footer";
 import HeroSection from "@/components/landing/hero-section";
 import FeaturesSection from "@/components/landing/features-section";
 import TemplatesSection from "@/components/landing/templates-section";
+import TrendingSection from "@/components/landing/trending-section";
 import CtaSection from "@/components/landing/cta-section";
 
 export default function Home() {
@@ -13,6 +14,7 @@ export default function Home() {
         <HeroSection />
         <FeaturesSection />
         <TemplatesSection />
+        <TrendingSection />
         <CtaSection />
       </main>
       <Footer />

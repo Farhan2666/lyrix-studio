@@ -2,8 +2,20 @@
 
 import { useStudioStore } from "@/store/studio-store";
 import { useState } from "react";
+import SmartTemplateSuggest from "./template-suggest";
 
 type PanelTab = "typography" | "appearance" | "animation";
+
+function getGenreFromBpm(bpm: number): string {
+  if (bpm >= 120 && bpm <= 150) return "EDM";
+  if (bpm >= 80 && bpm <= 100) return "Synthwave";
+  if (bpm >= 85 && bpm <= 110) return "Hip-Hop";
+  if (bpm >= 65 && bpm <= 85) return "Indie";
+  if (bpm >= 130 && bpm <= 160) return "Rock";
+  if (bpm >= 100 && bpm <= 130) return "Pop";
+  if (bpm >= 60 && bpm <= 80) return "Jazz";
+  return "Pop";
+}
 
 export default function ControlPanel() {
   const { designProps, updateDesignProps } = useStudioStore();
@@ -246,6 +258,8 @@ export default function ControlPanel() {
                 Animations sync with BPM and waveform in real-time.
               </p>
             </div>
+
+            <SmartTemplateSuggest genre={getGenreFromBpm(designProps.animation.bpm)} />
           </>
         )}
       </div>

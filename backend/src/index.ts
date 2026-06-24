@@ -7,6 +7,7 @@ import { designRouter } from "./routes/design";
 import { templateRouter } from "./routes/template";
 import { exportRouter } from "./routes/export";
 import { hueRouter } from "./routes/hue";
+import { musicRouter } from "./routes/music";
 import { notFoundHandler, errorHandler } from "./middleware/error";
 
 export const prisma = new PrismaClient();
@@ -27,6 +28,7 @@ app.use("/api/design", designRouter);
 app.use("/api/templates", templateRouter);
 app.use("/api/export", exportRouter);
 app.use("/api/hue", hueRouter);
+app.use("/api/music", musicRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

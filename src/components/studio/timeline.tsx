@@ -3,12 +3,14 @@
 import { useStudioStore } from "@/store/studio-store";
 import { useRef, useState } from "react";
 import { formatDuration } from "@/lib/utils";
+import SongSearch from "./song-search";
 
 export default function Timeline() {
   const { lyrics, currentLine, setCurrentLine, isPlaying, setIsPlaying, currentTime, setCurrentTime, setAudioFile, setLyrics } = useStudioStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showLyricInput, setShowLyricInput] = useState(false);
   const [lyricText, setLyricText] = useState("");
+  const [showSongSearch, setShowSongSearch] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,6 +62,17 @@ export default function Timeline() {
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowSongSearch(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-neon-indigo/20 to-hologram-teal/20 border border-neon-indigo/30 px-3 py-1.5 text-xs font-medium text-hologram-teal transition-all hover:shadow-[0_0_15px_rgba(0,255,224,0.2)]"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21L16.65 16.65" />
+            </svg>
+            Search Song
+          </button>
+          <div className="h-4 w-px bg-border" />
+          <button
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary"
           >
@@ -89,6 +102,8 @@ export default function Timeline() {
           className="hidden"
           onChange={handleFileUpload}
         />
+
+        <SongSearch open={showSongSearch} onClose={() => setShowSongSearch(false)} />
       </div>
 
       {showLyricInput && (
