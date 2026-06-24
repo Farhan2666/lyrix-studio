@@ -1,0 +1,33 @@
+{
+  "name": "lyrix-studio-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.21",
+    "jsonwebtoken": "^9",
+    "multer": "^1.4.5-lts.1",
+    "zod": "^3.23"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4",
+    "@types/cors": "^2.8",
+    "@types/express": "^5",
+    "@types/jsonwebtoken": "^9",
+    "@types/multer": "^1",
+    "@types/node": "^20",
+    "prisma": "^6",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

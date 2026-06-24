@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(uuid())
+  email          String   @unique
+  username       String   @unique
+  hashedPassword String
+  avatarUrl      String?
+  permissions    Json     @default("{\"canBypassWatermark\":false,\"canUseBrandKit\":false,\"canInviteCollaborators\":0,\"hardwareSyncLimit\":\"none\"}")
+  premiumExpiry  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  designs       Design[]
+  collaborations Collaboration[]
+}
+
+model Design {
+  id               String   @id @default(uuid())
+  userId           String
+  title            String
+  cssProperties    Json     @default("{}")
+  animationProfile Json     @default("{}")
+  hardwareSettings Json     @default("{}")
+  audioId          String?
+  templateId       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audioFile     AudioFile?     @relation(fields: [audioId], references: [id])
+  template      Template?      @relation(fields: [templateId], references: [id])
+  collaborations Collaboration[]
+}
+
+model AudioFile {
+  id           String   @id @default(uuid())
+  fingerprint  String   @unique
+  title        String?
+  artist       String?
+  genre        String?
+  bpm          Int?
+  key          String?
+  storagePath  String
+  duration     Float?
+  createdAt    DateTime @default(now())
+
+  designs Design[]
+}
+
+model Template {
+  id           String   @id @default(uuid())
+  name         String
+  genre        String
+  mood         String?
+  complexity   String?
+  defaultProps Json     @default("{}")
+  previewUrl   String?
+  bpmRange     String?
+  createdAt    DateTime @default(now())
+
+  designs Design[]
+}
+
+model Collaboration {
+  id        String   @id @default(uuid())
+  designId  String
+  userId    String
+  role      String   @default("editor")
+  createdAt DateTime @default(now())
+
+  design Design @relation(fields: [designId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([designId, userId])
+}
