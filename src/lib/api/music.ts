@@ -1,18 +1,47 @@
-import type { SongResult, LyricsResult, ArtistInfo, TrendingSong } from "@/lib/data/music-data";
-import { searchSongs as localSearch, getLyrics as localGetLyrics, getLyricsBySearch as localGetLyricsBySearch, trendingSongs as localTrending, artistDatabase } from "@/lib/data/music-data";
+export interface SongResult {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  albumArt: string;
+  previewUrl: string | null;
+  genre: string;
+  duration: number;
+  source: string;
+}
 
-export type { SongResult, LyricsResult, ArtistInfo, TrendingSong };
+export interface LyricsResult {
+  lyrics: string;
+  source: string;
+  copyright?: string;
+}
 
-const DEEZER_API = "https://api.deezer.com";
-const LYRIC_OVH = "https://api.lyrics.ovh/v1";
+export interface TrendingSong {
+  id: string;
+  title: string;
+  artist: string;
+  albumArt: string;
+  genre: string;
+  plays: string;
+}
 
-function deezerTrackToResult(t: any): SongResult {
+export interface ArtistInfo {
+  name: string;
+  image: string;
+  bio: string;
+  nb_fan?: number;
+  similar: { name: string; image: string }[];
+  topTracks: { title: string; rank?: number; plays?: string }[];
+  genre: string;
+}
+
+function deezerToSong(t: any): SongResult {
   return {
     id: `deezer-${t.id}`,
     title: t.title,
     artist: t.artist?.name || "Unknown",
     album: t.album?.title || "Unknown",
-    albumArt: (t.album?.cover || "").replace("https://", "https://"),
+    albumArt: (t.album?.cover || "").replace("http://", "https://"),
     previewUrl: t.preview || null,
     genre: "Pop",
     duration: t.duration || 0,
@@ -22,111 +51,53 @@ function deezerTrackToResult(t: any): SongResult {
 
 export async function searchSongs(query: string): Promise<SongResult[]> {
   if (!query.trim()) return [];
-  try {
-    const res = await fetch(`${DEEZER_API}/search?q=${encodeURIComponent(query)}&limit=15`, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) throw new Error("Deezer error");
-    const json = await res.json();
-    if (json.data?.length > 0) return json.data.map(deezerTrackToResult);
-  } catch {}
-  return localSearch(query);
+  const res = await fetch(`/api/music/search?q=${encodeURIComponent(query)}`);
+  if (!res.ok) throw new Error("Search failed");
+  const json = await res.json();
+  return (json.data || []).map(deezerToSong);
 }
 
 export async function getLyrics(trackId: string): Promise<LyricsResult> {
-  // Deezer ID is after "deezer-" prefix
-  const deezerId = trackId.replace("deezer-", "");
-  try {
-    // First get track info to get artist/title
-    const trackRes = await fetch(`${DEEZER_API}/track/${deezerId}`, { signal: AbortSignal.timeout(5000) });
-    if (trackRes.ok) {
-      const track = await trackRes.json();
-      if (track.artist?.name && track.title) {
-        const lyricRes = await fetch(`${LYRIC_OVH}/${encodeURIComponent(track.artist.name)}/${encodeURIComponent(track.title)}`, { signal: AbortSignal.timeout(5000) });
-        if (lyricRes.ok) {
-          const lyricJson = await lyricRes.json();
-          if (lyricJson.lyrics) {
-            return { lyrics: lyricJson.lyrics, source: "lyrics.ovh", copyright: "Lyrics provided by lyrics.ovh" };
-          }
-        }
-      }
-    }
-  } catch {}
-  const local = localGetLyrics(trackId);
-  if (local) return local;
-  throw new Error("Lyrics not found");
+  const res = await fetch(`/api/music/lyrics?trackId=${encodeURIComponent(trackId)}`);
+  if (!res.ok) throw new Error("Lyrics not found");
+  return res.json();
 }
 
 export async function getLyricsBySearch(title: string, artist?: string): Promise<LyricsResult> {
-  try {
-    const url = artist ? `${LYRIC_OVH}/${encodeURIComponent(artist)}/${encodeURIComponent(title)}` : null;
-    if (url) {
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.lyrics) return { lyrics: json.lyrics, source: "lyrics.ovh", copyright: "Lyrics provided by lyrics.ovh" };
-      }
-    }
-  } catch {}
-  const local = localGetLyricsBySearch(title, artist);
-  if (local) return local;
-  throw new Error("Lyrics not found");
+  const params = new URLSearchParams({ title });
+  if (artist) params.set("artist", artist);
+  const res = await fetch(`/api/music/lyrics?${params}`);
+  if (!res.ok) throw new Error("Lyrics not found");
+  return res.json();
 }
 
 export async function getTrending(): Promise<TrendingSong[]> {
-  try {
-    const res = await fetch(`${DEEZER_API}/chart/0/tracks?limit=10`, { signal: AbortSignal.timeout(5000) });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.data?.length > 0) {
-        return json.data.slice(0, 8).map((t: any, i: number) => ({
-          id: `trend-deezer-${t.id}`,
-          title: t.title,
-          artist: t.artist?.name || "Unknown",
-          albumArt: (t.album?.cover || "").replace("https://", "https://"),
-          genre: "Pop",
-          plays: `${(100 - i * 12)}M`,
-        }));
-      }
-    }
-  } catch {}
-  return localTrending;
+  const res = await fetch("/api/music/trending");
+  if (!res.ok) throw new Error("Trending fetch failed");
+  const json = await res.json();
+  return (json.tracks || []).slice(0, 8).map((t: any, i: number) => ({
+    id: `deezer-${t.id}`,
+    title: t.title,
+    artist: t.artist?.name || "Unknown",
+    albumArt: (t.album?.cover || "").replace("http://", "https://"),
+    genre: "Pop",
+    plays: `${(100 - i * 12)}M`,
+  }));
 }
 
 export async function getArtistInfo(name: string): Promise<ArtistInfo> {
-  try {
-    const res = await fetch(`${DEEZER_API}/search/artist?q=${encodeURIComponent(name)}&limit=1`, { signal: AbortSignal.timeout(5000) });
-    if (res.ok) {
-      const json = await res.json();
-      if (json.data?.length > 0) {
-        const a = json.data[0];
-        const info: ArtistInfo = {
-          name: a.name,
-          image: a.picture_big || a.picture || "",
-          bio: `${a.name} is an artist on Deezer with ${(a.nb_fan || 0).toLocaleString()} fans.`,
-          similar: [],
-          topTracks: [],
-          genre: "Pop",
-        };
-        try {
-          const topRes = await fetch(`${DEEZER_API}/artist/${a.id}/top?limit=5`, { signal: AbortSignal.timeout(3000) });
-          if (topRes.ok) {
-            const topJson = await topRes.json();
-            info.topTracks = (topJson.data || []).map((t: any) => ({ title: t.title, plays: `${(t.rank || 0)}` }));
-          }
-        } catch {}
-        try {
-          const relRes = await fetch(`${DEEZER_API}/artist/${a.id}/related?limit=3`, { signal: AbortSignal.timeout(3000) });
-          if (relRes.ok) {
-            const relJson = await relRes.json();
-            info.similar = (relJson.data || []).map((r: any) => ({ name: r.name, image: r.picture || "" }));
-          }
-        } catch {}
-        return info;
-      }
-    }
-  } catch {}
-  const local = artistDatabase[name];
-  if (local) return local;
-  throw new Error("Artist not found");
+  const res = await fetch(`/api/music/artist?name=${encodeURIComponent(name)}`);
+  if (!res.ok) throw new Error("Artist not found");
+  const a = await res.json();
+  return {
+    name: a.name,
+    image: a.image || "",
+    bio: `${a.name} has ${(a.nb_fan || 0).toLocaleString()} fans on Deezer.`,
+    nb_fan: a.nb_fan,
+    similar: a.similar || [],
+    topTracks: a.topTracks || [],
+    genre: "Pop",
+  };
 }
 
 export async function suggestTemplates(genre: string): Promise<string[]> {
