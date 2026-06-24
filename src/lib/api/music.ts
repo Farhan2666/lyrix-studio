@@ -1,86 +1,65 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+import {
+  searchSongs as localSearch,
+  getLyrics as localGetLyrics,
+  getLyricsBySearch as localGetLyricsBySearch,
+  trendingSongs,
+  artistDatabase,
+  musicCatalog,
+  genreBpmMap,
+  type SongResult,
+  type LyricsResult,
+  type ArtistInfo,
+  type TrendingSong,
+} from "@/lib/data/music-data";
 
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
+// All data is local — no backend calls needed.
+// Works entirely offline, deployed on Vercel with zero dependencies.
 
-export interface SongResult {
-  id: string;
-  title: string;
-  artist: string;
-  album: string;
-  albumArt: string;
-  previewUrl: string | null;
-  genre: string;
-  duration: number;
-  source: string;
-}
-
-export interface LyricsResult {
-  lyrics: string;
-  source: string;
-  copyright: string;
-}
-
-export interface ArtistInfo {
-  name: string;
-  image: string;
-  bio: string;
-  similar: { name: string; image: string }[];
-  topTracks: { title: string; plays: string }[];
-  genre: string;
-}
-
-export interface TrendingSong {
-  id: string;
-  title: string;
-  artist: string;
-  albumArt: string;
-  genre: string;
-  plays: string;
-}
+export type { SongResult, LyricsResult, ArtistInfo, TrendingSong };
 
 export async function searchSongs(query: string): Promise<SongResult[]> {
-  const data = await fetchJSON<{ results: SongResult[] }>(
-    `${API_URL}/music/search?q=${encodeURIComponent(query)}`
-  );
-  return data.results;
+  return localSearch(query);
 }
 
 export async function getLyrics(trackId: string): Promise<LyricsResult> {
-  const data = await fetchJSON<{ lyrics: LyricsResult }>(
-    `${API_URL}/music/lyrics/${trackId}`
-  );
-  return data.lyrics;
+  const result = localGetLyrics(trackId);
+  if (!result) throw new Error("Lyrics not found");
+  return result;
 }
 
 export async function getLyricsBySearch(title: string, artist?: string): Promise<LyricsResult> {
-  const params = `title=${encodeURIComponent(title)}${artist ? `&artist=${encodeURIComponent(artist)}` : ""}`;
-  const data = await fetchJSON<{ lyrics: LyricsResult }>(
-    `${API_URL}/music/lyrics?${params}`
-  );
-  return data.lyrics;
+  const result = localGetLyricsBySearch(title, artist);
+  if (!result) throw new Error("Lyrics not found");
+  return result;
 }
 
 export async function getTrending(): Promise<TrendingSong[]> {
-  const data = await fetchJSON<{ trending: TrendingSong[] }>(
-    `${API_URL}/music/trending`
-  );
-  return data.trending;
+  return trendingSongs;
 }
 
 export async function getArtistInfo(name: string): Promise<ArtistInfo> {
-  const data = await fetchJSON<{ artist: ArtistInfo }>(
-    `${API_URL}/music/artist?name=${encodeURIComponent(name)}`
-  );
-  return data.artist;
+  const info = artistDatabase[name];
+  if (info) return info;
+  const track = musicCatalog.find((s) => s.artist.toLowerCase().includes(name.toLowerCase()));
+  if (track && artistDatabase[track.artist]) return artistDatabase[track.artist];
+  throw new Error("Artist not found");
 }
 
 export async function suggestTemplates(genre: string): Promise<string[]> {
-  const data = await fetchJSON<{ templates: string[] }>(
-    `${API_URL}/music/suggest-templates?genre=${encodeURIComponent(genre)}`
-  );
-  return data.templates;
+  const genreMap: Record<string, string[]> = {
+    EDM: ["Neon Pulse", "Cyber Rain"],
+    Synthwave: ["Midnight Vapor"],
+    "Hip-Hop": ["Urban Flow", "Lo-Fi Beats"],
+    Indie: ["Acoustic Warmth", "Jazz Night"],
+    Rock: ["Rock Anthem"],
+    Pop: ["Neon Pulse"],
+    Jazz: ["Jazz Night"],
+    Ambient: ["Acoustic Warmth"],
+    World: ["Urban Flow"],
+  };
+  return genreMap[genre] || [];
+}
+
+export function getBpmForGenre(genre: string): number {
+  return genreBpmMap[genre] || 120;
 }
